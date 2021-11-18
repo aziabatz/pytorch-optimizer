@@ -16,6 +16,12 @@ def rosenbrock(tensor):
     return (1 - x) ** 2 + 100 * (y - x ** 2) ** 2
 
 
+def himmelblaus(tensor):
+    # https://en.wikipedia.org/wiki/Test_functions_for_optimization
+    x, y = tensor
+    return (x**2 + y - 11) ** 2 + (x + y**2 - 7) ** 2
+
+
 def rastrigin(tensor, lib=torch):
     # https://en.wikipedia.org/wiki/Test_functions_for_optimization
     x, y = tensor
@@ -72,6 +78,19 @@ def objective_rosenbrok(params):
     return (steps[0][-1] - minimum[0]) ** 2 + (steps[1][-1] - minimum[1]) ** 2
 
 
+def objective_himmelblaus(params):
+    lr = params['lr']
+    optimizer_class = params['optimizer_class']
+    minimum = (3.0,2.0)
+    initial_state = (0.1, -3.0)
+    optimizer_config = dict(lr=lr)
+    num_iter = 100
+    steps = execute_steps(
+        himmelblaus, initial_state, optimizer_class, optimizer_config, num_iter
+    )
+    return (steps[0][-1] - minimum[0]) ** 2 + (steps[1][-1] - minimum[1]) ** 2
+
+
 def plot_rastrigin(grad_iter, optimizer_name, lr):
     x = np.linspace(-4.5, 4.5, 250)
     y = np.linspace(-4.5, 4.5, 250)
@@ -121,6 +140,31 @@ def plot_rosenbrok(grad_iter, optimizer_name, lr):
     plt.savefig('docs/rosenbrock_{}.png'.format(optimizer_name))
 
 
+def plot_himmelblaus(grad_iter, optimizer_name, lr):
+    x = np.linspace(-4, 4, 250)
+    y = np.linspace(-4, 4, 250)
+    minimum = (3.0, 2.0)
+
+    X, Y = np.meshgrid(x, y)
+    Z = himmelblaus([X, Y])
+
+    iter_x, iter_y = grad_iter[0, :], grad_iter[1, :]
+
+    fig = plt.figure(figsize=(8, 8))
+
+    ax = fig.add_subplot(1, 1, 1)
+    ax.contour(X, Y, Z, 90, cmap='jet')
+    ax.plot(iter_x, iter_y, color='r', marker='x')
+
+    ax.set_title(
+        'Himmelblaus func: {} with {} '
+        'iterations, lr={:.6}'.format(optimizer_name, len(iter_x), lr)
+    )
+    plt.plot(*minimum, 'gD')
+    plt.plot(iter_x[-1], iter_y[-1], 'rD')
+    plt.savefig('docs/himmelblaus_{}.png'.format(optimizer_name))
+
+
 def execute_experiments(
     optimizers, objective, func, plot_func, initial_state, seed=1
 ):
@@ -162,39 +206,40 @@ if __name__ == '__main__':
     # help to converge on better lr faster.
     optimizers = [
         # baselines
-        (torch.optim.Adam, -8, 0.5),
-        (torch.optim.SGD, -8, -1.0),
-        # Adam based
-        (optim.AdaBound, -8, 0.3),
-        (optim.Adahessian, -1, 8),
-        (optim.AdaMod, -8, 0.2),
-        (optim.AdamP, -8, 0.2),
-        (optim.DiffGrad, -8, 0.4),
-        (optim.Lamb, -8, -2.9),
-        (optim.MADGRAD, -8, 0.5),
-        (optim.NovoGrad, -8, -1.7),
-        (optim.RAdam, -8, 0.5),
-        (optim.Yogi, -8, 0.1),
-        # SGD/Momentum based
-        (optim.AccSGD, -8, -1.4),
-        (optim.SGDW, -8, -1.5),
-        (optim.SGDP, -8, -1.5),
-        (optim.PID, -8, -1.0),
-        (optim.QHM, -6, -0.2),
-        (optim.QHAdam, -8, 0.1),
-        (optim.Ranger, -8, 0.1),
-        (optim.RangerQH, -8, 0.1),
-        (optim.RangerVA, -8, 0.1),
-        (optim.Shampoo, -8, 0.1),
-        (LookaheadYogi, -8, 0.1),
-        (optim.AggMo, -8, -1.5),
-        (optim.SWATS, -8, -1.5),
-        (optim.Adafactor, -8, 0.5),
-        (optim.A2GradUni, -8, 0.1),
-        (optim.A2GradInc, -8, 0.1),
-        (optim.A2GradExp, -8, 0.1),
-        (optim.AdaBelief, -8, 0.1),
-        (optim.Apollo, -8, 0.1),
+        (torch.optim.Adam, -8, 0.5), # interesante
+        #(torch.optim.SGD, -8, -1.0), # interesante
+        ## Adam based
+        #(optim.AdaBound, -8, 0.3),
+        #(optim.Adahessian, -1, 8),
+        #(optim.AdaMod, -8, 0.2),
+        #(optim.AdamP, -8, 0.2),
+        #(optim.DiffGrad, -8, 0.4), # interesante
+        (optim.Angulargrad, -8, 0.4), # interesante
+        #(optim.Lamb, -8, -2.9),
+        #(optim.MADGRAD, -8, 0.5),
+        #(optim.NovoGrad, -8, -1.7),
+        #(optim.RAdam, -8, 0.5), # interesante (jodido)
+        #(optim.Yogi, -8, 0.1),
+        ## SGD/Momentum based
+        #(optim.AccSGD, -8, -1.4),
+        #(optim.SGDW, -8, -1.5),
+        #(optim.SGDP, -8, -1.5),
+        #(optim.PID, -8, -1.0),
+        #(optim.QHM, -6, -0.2),
+        #(optim.QHAdam, -8, 0.1),
+        #(optim.Ranger, -8, 0.1),
+        #(optim.RangerQH, -8, 0.1),
+        #(optim.RangerVA, -8, 0.1),
+        #(optim.Shampoo, -8, 0.1),
+        #(LookaheadYogi, -8, 0.1),
+        #(optim.AggMo, -8, -1.5),
+        #(optim.SWATS, -8, -1.5),
+        #(optim.Adafactor, -8, 0.5),
+        #(optim.A2GradUni, -8, 0.1),
+        #(optim.A2GradInc, -8, 0.1),
+        #(optim.A2GradExp, -8, 0.1),
+        #(optim.AdaBelief, -8, 0.1), # interesante
+        #(optim.Apollo, -8, 0.1),
     ]
     execute_experiments(
         optimizers,
@@ -204,10 +249,18 @@ if __name__ == '__main__':
         (-2.0, 3.5),
     )
 
-    execute_experiments(
-        optimizers,
-        objective_rosenbrok,
-        rosenbrock,
-        plot_rosenbrok,
-        (-2.0, 2.0),
-    )
+    #execute_experiments(
+        #optimizers,
+        #objective_rosenbrok,
+        #rosenbrock,
+        #plot_rosenbrok,
+        #(-2.0, 2.0),
+    #)
+
+    #execute_experiments(
+        #optimizers,
+        #objective_himmelblaus,
+        #himmelblaus,
+        #plot_himmelblaus,
+        #(0.1, -3.0),
+    #)
